@@ -64,8 +64,63 @@ else
 fi
 
 
+# --- Instalação do Terminal Ghostty ---
+log "5. Instalando o terminal Ghostty via Snap..."
+if snap list | grep -q ghostty; then
+    log "Ghostty já está instalado. Pulando."
+else
+    sudo snap install ghostty --classic
+fi
+
+log "6. Configurando o Ghostty..."
+GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
+mkdir -p "$GHOSTTY_CONFIG_DIR"
+
+cat << 'EOF' > "$GHOSTTY_CONFIG_DIR/config"
+theme = "tokyonight_night"
+font-family = "JetBrainsMono NFM Regular"
+font-size = 19
+alpha-blending = native
+
+keybind = "cmd+r=reload_config"
+keybind = "cmd+up=new_split:up"
+keybind = "cmd+down=new_split:down"
+keybind = "cmd+left=new_split:left"
+keybind = "cmd+right=new_split:right"
+keybind = "cmd+shift+w=close_all_windows"
+keybind = "cmd+ctrl+up=resize_split:up,10"
+keybind = "cmd+ctrl+down=resize_split:down,10"
+keybind = "cmd+ctrl+left=resize_split:left,10"
+keybind = "cmd+ctrl+right=resize_split:right,10"
+
+cursor-style = "bar"
+mouse-hide-while-typing = true
+
+background-opacity = 0.85
+background-blur = 20
+window-colorspace = "srgb"
+window-decoration = "auto"
+
+window-width = 108
+window-height = 25
+
+clipboard-read = "allow"
+clipboard-write = "allow"
+
+confirm-close-surface = false
+quit-after-last-window-closed = true
+
+quick-terminal-position = "center"
+shell-integration = "zsh"
+
+# macos-icon
+# official blueprint chalkboard microchip glass holographic paper retro xray
+macos-icon = "xray"
+auto-update = "check"
+EOF
+
 # --- Criação do Arquivo .zshrc ---
-log "5. Configurando o arquivo .zshrc..."
+log "7. Configurando o arquivo .zshrc..."
 
 # Backup do .zshrc existente, se houver
 [ -f "$HOME/.zshrc" ] && mv "$HOME/.zshrc" "$HOME/.zshrc.bak_$(date +%Y%m%d_%H%M%S)"
@@ -132,8 +187,76 @@ else
   log "O shell padrão já é Zsh."
 fi
 
+# --- Instalação e Configuração do Tmux ---
+log "8. Instalando o Tmux e o TPM (Tmux Plugin Manager)..."
+sudo apt install -y tmux
+
+if [ -d "$HOME/.tmux/plugins/tpm" ]; then
+  log "TPM já está instalado. Pulando."
+else
+  git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+fi
+
+log "9. Configurando o arquivo .tmux.conf..."
+
+cat << 'EOF' > "$HOME/.tmux.conf"
+### ---------- CONFIGURAÇÕES BÁSICAS ----------
+# Prefixo trocado para Ctrl+a
+set -g prefix C-a
+unbind C-b
+bind C-a send-prefix
+
+# Modo vi para copiar texto
+setw -g mode-keys vi
+
+# Melhor histórico de rolagem
+set -g history-limit 10000
+
+# Atualizar status bar a cada 5 segundos
+set -g status-interval 5
+
+# Melhor cores (256)
+set -g default-terminal "screen-256color"
+
+# Dividir janelas com | e -
+bind | split-window -h
+bind - split-window -v
+unbind '"'
+unbind %
+
+# Atalhos para mudar entre janelas
+bind -n M-Left previous-window
+bind -n M-Right next-window
+
+# Atualizar config sem sair
+bind r source-file ~/.tmux.conf \; display-message "Config reloaded!"
+
+
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+set -g @plugin 'tmux-plugins/tmux-yank'
+set -g @plugin 'christoomey/vim-tmux-navigator' # Este plugin cuidará da navegação C-h, C-j, C-k, C-l
+set -g @plugin 'dracula/tmux'
+set -g @plugin 'tmux-plugins/tmux-prefix-highlight'
+set -g @prefix_highlight_fg 'white' # default is 'colour231'
+set -g @prefix_highlight_bg 'blue'  # default is 'colour04'
+
+# Configuração do tmux-continuum para salvar/restaurar
+set -g @continuum-restore 'on'
+
+# Tema Dracula
+set -g @dracula-show-powerline true
+set -g @dracula-plugins "cpu-usage ram-usage date time"
+set -g @dracula-refresh-rate 5
+
+### ---------- INICIALIZA TPM ----------
+run '~/.tmux/plugins/tpm/tpm'
+EOF
+
 log "--- Configuração Concluída! ---"
 echo "Passos finais importantes:"
 echo "1. FAÇA LOGOUT E LOGIN na sua sessão Ubuntu para que a mudança de shell seja aplicada."
-echo "2. ABRA AS CONFIGURAÇÕES DO SEU TERMINAL e mude a fonte para 'JetBrainsMono Nerd Font'."
-Echo "Aproveite seu novo terminal!"
+echo "2. ABRA O GHOSTTY (ou seu terminal preferido) e mude a fonte para 'JetBrainsMono NFM Regular' nas configurações, se necessário."
+echo "3. INICIE O TMUX e pressione 'Ctrl+a' e depois 'I' (maiúsculo) para que o TPM instale os plugins."
+echo "Aproveite seu novo ambiente!"
